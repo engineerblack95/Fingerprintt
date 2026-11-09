@@ -11,7 +11,15 @@ from .realtime import broadcast_entry
 logger = logging.getLogger(__name__)
 
 
-def record_entry(*, device, status, member, timestamp, synced_from_device=False) -> EntryLog:
+def record_entry(
+    *,
+    device,
+    status,
+    member,
+    timestamp,
+    synced_from_device=False,
+    hardware_slot=None,
+) -> EntryLog:
     """Create the authoritative log row, then notify after the DB commit.
 
     WebSocket broadcast and email are side effects: failures are logged and
@@ -22,6 +30,7 @@ def record_entry(*, device, status, member, timestamp, synced_from_device=False)
             device=device,
             status=status,
             member=member,
+            hardware_slot=hardware_slot,
             timestamp=timestamp,
             synced_from_device=synced_from_device,
         )
@@ -48,6 +57,13 @@ def _dispatch(log_id: int) -> None:
         broadcast_entry(log)
     except Exception:  # pragma: no cover - side-effect guard
         logger.exception("Failed to broadcast entry event %s", log_id)
+
+    if log.status == EntryLog.Status.ENROLLED:
+        logger.info(
+            "New fingerprint enrolled on hardware for Member ID: %s",
+            log.hardware_slot,
+        )
+        return
 
     try:
         from notifications.emails import send_entry_notification

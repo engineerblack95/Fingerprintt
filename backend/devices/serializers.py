@@ -49,11 +49,26 @@ class DeviceEventSerializer(serializers.Serializer):
         member_id = attrs.get("member_id")
 
         if status == EntryLog.Status.UNKNOWN:
-            if member_id is not None:
+            # Older firmware omitted member_id; newer firmware sends 0.
+            if member_id not in (None, 0):
                 raise serializers.ValidationError(
-                    {"member_id": "member_id must be null when status is UNKNOWN."}
+                    {"member_id": "member_id must be null or 0 when status is UNKNOWN."}
                 )
             member = None
+            hardware_slot = None
+        elif status == EntryLog.Status.ENROLLED:
+            # Hardware enrollment reports the AS608 sensor slot (1-127), not a
+            # Django Member primary key. It never links to a Member row.
+            if member_id is None:
+                raise serializers.ValidationError(
+                    {"member_id": "member_id (sensor slot) is required for ENROLLED events."}
+                )
+            if not 1 <= member_id <= 127:
+                raise serializers.ValidationError(
+                    {"member_id": "member_id must be an AS608 slot between 1 and 127."}
+                )
+            member = None
+            hardware_slot = member_id
         else:
             if member_id is None:
                 raise serializers.ValidationError(
@@ -77,6 +92,7 @@ class DeviceEventSerializer(serializers.Serializer):
                         )
                     }
                 )
+            hardware_slot = None
 
         device = Device.objects.filter(device_id=attrs["device_id"]).first()
         if device is None:
@@ -103,6 +119,7 @@ class DeviceEventSerializer(serializers.Serializer):
         )
         attrs["timestamp"] = timestamp
         attrs["member"] = member
+        attrs["hardware_slot"] = hardware_slot
         attrs["device"] = device
         return attrs
 

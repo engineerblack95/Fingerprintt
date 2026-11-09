@@ -7,6 +7,7 @@ import {
   Search,
   ShieldAlert,
   UserRound,
+  Wrench,
 } from 'lucide-react';
 
 import { devicesApi, getErrorMessage, logsApi } from '../api/client';
@@ -24,6 +25,7 @@ const STATUS_TABS = [
   { value: 'MEMBER', label: 'Members' },
   { value: 'VISITOR', label: 'Visitors' },
   { value: 'UNKNOWN', label: 'Unknowns' },
+  { value: 'ENROLLED', label: 'Enrollments' },
 ];
 
 const EMPTY_FILTERS = { status: '', dateFrom: '', dateTo: '', device: '' };
@@ -235,12 +237,16 @@ export function LogsPage() {
               ) : logs.length ? (
                 logs.map((log) => {
                   const photoUrl = resolveMediaUrl(log.member?.photo_url);
+                  const isEnrolled = log.status === 'ENROLLED';
+                  const enrolledSlot = log.hardware_slot ?? '—';
                   return (
                     <tr key={log.id}>
                       <td>
                         <div className="table-person">
-                          <div className="table-avatar">
-                            {log.member ? (
+                          <div className={`table-avatar ${isEnrolled ? 'table-avatar-info' : ''}`}>
+                            {isEnrolled ? (
+                              <Wrench size={16} />
+                            ) : log.member ? (
                               photoUrl ? (
                                 <img src={photoUrl} alt={log.member.full_name} loading="lazy" />
                               ) : (
@@ -256,12 +262,18 @@ export function LogsPage() {
                           </div>
                           <div>
                             <strong>
-                              {log.member ? log.member.full_name : 'Unknown person'}
+                              {isEnrolled
+                                ? `Fingerprint enrolled · slot ${enrolledSlot}`
+                                : log.member
+                                  ? log.member.full_name
+                                  : 'Unknown person'}
                             </strong>
                             <span>
-                              {log.member
-                                ? `@${log.member.username} · ${log.member.email}`
-                                : 'No registered profile found'}
+                              {isEnrolled
+                                ? '🔧 Hardware update from device'
+                                : log.member
+                                  ? `@${log.member.username} · ${log.member.email}`
+                                  : 'No registered profile found'}
                             </span>
                           </div>
                         </div>

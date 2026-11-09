@@ -13,6 +13,7 @@ class EntryLog(models.Model):
         MEMBER = "MEMBER", "Member"
         VISITOR = "VISITOR", "Visitor"
         UNKNOWN = "UNKNOWN", "Unknown / Intruder"
+        ENROLLED = "ENROLLED", "Hardware enrolled"
 
     member = models.ForeignKey(
         Member,
@@ -26,6 +27,14 @@ class EntryLog(models.Model):
         Device, on_delete=models.PROTECT, related_name="entry_logs"
     )
     status = models.CharField(max_length=10, choices=Status.choices)
+    hardware_slot = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text=(
+            "AS608 fingerprint sensor slot (1-127) reported by the device for "
+            "hardware enrollment events."
+        ),
+    )
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
     synced_from_device = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -42,11 +51,17 @@ class EntryLog(models.Model):
                 condition=(
                     Q(status__in=["MEMBER", "VISITOR"], member__isnull=False)
                     | Q(status="UNKNOWN", member__isnull=True)
+                    | Q(status="ENROLLED", member__isnull=True)
                 ),
                 name="entrylog_member_matches_status",
             )
         ]
 
     def __str__(self) -> str:
+        if self.status == self.Status.ENROLLED:
+            return (
+                f"Fingerprint enrolled (slot {self.hardware_slot}) "
+                f"@ {self.device.location_name}"
+            )
         who = self.member.full_name if self.member else "Unknown person"
         return f"{who} @ {self.device.location_name} ({self.status})"

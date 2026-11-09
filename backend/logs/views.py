@@ -144,6 +144,9 @@ class DashboardStatsView(APIView):
             bucket = buckets.get(row["day"])
             if bucket is None:
                 continue
+            if row["status"] == EntryLog.Status.ENROLLED:
+                # Hardware enrollments are system events, not door traffic.
+                continue
             key = {
                 EntryLog.Status.MEMBER: "members",
                 EntryLog.Status.VISITOR: "visitors",

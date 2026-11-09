@@ -5,6 +5,7 @@ import {
   ArrowRight,
   CalendarDays,
   RefreshCw,
+  Settings,
   ShieldAlert,
   UserCheck,
   Users,
@@ -15,7 +16,7 @@ import { dashboardApi, getErrorMessage, logsApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardSocket } from '../hooks/useDashboardSocket';
 import { formatDateTime } from '../utils/format';
-import { CHART_COLORS } from '../utils/constants';
+import { CHART_COLORS, getAdminUrl } from '../utils/constants';
 import { PageHeader } from '../components/PageHeader';
 import { StatCard } from '../components/StatCard';
 import { TrafficChart } from '../components/TrafficChart';
@@ -47,6 +48,7 @@ function logToEvent(log) {
         }
       : null,
     device: log.device ? { location_name: log.device.location_name } : null,
+    hardware_slot: log.hardware_slot ?? null,
     timestamp: log.timestamp,
     isNew: false,
   };
@@ -165,6 +167,16 @@ export function DashboardPage() {
             <span className={`live-pill live-${socketStatus === 'connected' ? 'connected' : socketStatus === 'disconnected' ? 'disconnected' : 'connecting'}`}>
               <span className="live-dot" /> {socketLabel}
             </span>
+            <a
+              className="btn btn-ghost"
+              href={getAdminUrl()}
+              target="_blank"
+              rel="noreferrer"
+              title="Open the Django admin dashboard"
+            >
+              <Settings size={15} />
+              Django admin
+            </a>
             <button
               type="button"
               className="btn btn-ghost"

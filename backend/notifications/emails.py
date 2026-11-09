@@ -44,6 +44,10 @@ def _attach_photo(message: EmailMultiAlternatives, member) -> bool:
 
 def send_entry_notification(log: EntryLog) -> None:
     """Send the HTML alert for one entry event to the owner."""
+    if log.status == EntryLog.Status.ENROLLED:
+        logger.info("Skipping email for hardware enrollment log %s", log.pk)
+        return
+
     owner_email = (settings.OWNER_EMAIL or "").strip()
     if not owner_email:
         logger.warning("OWNER_EMAIL is not configured; skipping notification.")

@@ -42,13 +42,19 @@ class DeviceEventView(APIView):
             device=data["device"],
             status=data["status"],
             member=data["member"],
+            hardware_slot=data.get("hardware_slot"),
             timestamp=data["timestamp"],
             synced_from_device=data["synced_from_device"],
         )
 
-        return Response(
-            EntryLogSerializer(log).data, status=status.HTTP_201_CREATED
+        # Hardware enrollment is an informational system event, not an access
+        # attempt, so it returns 200 OK instead of 201 Created.
+        response_status = (
+            status.HTTP_200_OK
+            if data["status"] == EntryLog.Status.ENROLLED
+            else status.HTTP_201_CREATED
         )
+        return Response(EntryLogSerializer(log).data, status=response_status)
 
 
 class DeviceHeartbeatView(APIView):

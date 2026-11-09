@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
+  ExternalLink,
   Fingerprint,
   LayoutDashboard,
   LogOut,
   Menu,
   Router,
   ScrollText,
+  Settings,
   ShieldCheck,
   Users,
   X,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
+import { getAdminUrl } from '../utils/constants';
 import { initials } from '../utils/format';
 
 const NAV_ITEMS = [
@@ -21,6 +24,8 @@ const NAV_ITEMS = [
   { to: '/logs', label: 'Entry logs', icon: ScrollText },
   { to: '/devices', label: 'Devices', icon: Router },
 ];
+
+const ADMIN_URL = getAdminUrl();
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -76,6 +81,21 @@ export function Layout() {
               <span className="nav-active-dot" />
             </NavLink>
           ))}
+
+          <span className="nav-label nav-label-spaced">Administration</span>
+          <a
+            href={ADMIN_URL}
+            className="nav-item"
+            target="_blank"
+            rel="noreferrer"
+            title="Open the Django admin dashboard in a new tab"
+          >
+            <span className="nav-icon">
+              <Settings size={19} />
+            </span>
+            <span>Django admin</span>
+            <ExternalLink size={13} className="nav-external" />
+          </a>
         </nav>
 
         <div className="sidebar-spacer" />

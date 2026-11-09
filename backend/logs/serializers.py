@@ -34,6 +34,7 @@ class EntryLogSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "member",
+            "hardware_slot",
             "device",
             "timestamp",
             "synced_from_device",

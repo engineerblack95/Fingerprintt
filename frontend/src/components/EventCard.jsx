@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, MapPin, Phone, ShieldAlert } from 'lucide-react';
+import { Mail, MapPin, Phone, ShieldAlert, Wrench } from 'lucide-react';
 
 import { STATUS_META } from '../utils/constants';
 import { formatDateTime, formatTime, initials, resolveMediaUrl, timeAgo } from '../utils/format';
@@ -10,6 +10,39 @@ export function EventCard({ event, isNew = false }) {
   const member = event.member;
   const location = event.device?.location_name || 'Unknown location';
   const [imageFailed, setImageFailed] = useState(false);
+
+  if (status === 'ENROLLED') {
+    const slot = event.hardware_slot ?? event.member_id ?? '—';
+    return (
+      <article className={`event-card event-enrolled ${isNew ? 'is-new' : ''}`}>
+        <div className="event-icon event-icon-info">
+          <Wrench size={22} />
+        </div>
+        <div className="event-body">
+          <div className="event-topline">
+            <span className="event-title event-title-info">
+              🔧 Hardware Update: Fingerprint enrolled for Member ID {slot}
+            </span>
+            {isNew ? <span className="live-new">NEW</span> : null}
+          </div>
+          <div className="event-meta">
+            <span className="meta-item">
+              <MapPin size={13} /> {location}
+            </span>
+            <span className="meta-item">
+              <time dateTime={event.timestamp} title={formatDateTime(event.timestamp)}>
+                {formatTime(event.timestamp)} · {timeAgo(event.timestamp)}
+              </time>
+            </span>
+          </div>
+        </div>
+        <span className="event-status-pill status-enrolled">
+          <span className="badge-dot" />
+          {meta.label}
+        </span>
+      </article>
+    );
+  }
 
   if (status === 'UNKNOWN' || !member) {
     return (

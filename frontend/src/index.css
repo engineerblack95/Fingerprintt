@@ -285,6 +285,20 @@ p {
   margin-bottom: 8px;
 }
 
+.nav-label-spaced {
+  margin-top: 18px;
+}
+
+.nav-external {
+  margin-left: auto;
+  color: #64748b;
+  flex: 0 0 auto;
+}
+
+.nav-item:hover .nav-external {
+  color: #a5b4fc;
+}
+
 .nav-item {
   position: relative;
   display: flex;
@@ -1194,6 +1208,12 @@ p {
   border-color: #fbd5d5;
 }
 
+.event-enrolled {
+  --status-color: #d97706;
+  background: linear-gradient(90deg, #fffbeb 0%, #ffffff 46%);
+  border-color: #fde68a;
+}
+
 .event-card.is-new {
   animation: eventIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -1224,6 +1244,11 @@ p {
   color: var(--blue-dark);
 }
 
+.fallback-enrolled {
+  background: #fef3c7;
+  color: #b45309;
+}
+
 .event-icon {
   width: 52px;
   height: 52px;
@@ -1236,6 +1261,11 @@ p {
 .event-icon-danger {
   background: var(--red-soft);
   color: var(--red);
+}
+
+.event-icon-info {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .event-body {
@@ -1262,6 +1292,13 @@ p {
   font-weight: 800;
   letter-spacing: 0.035em;
   color: var(--red-dark);
+}
+
+.event-title-info {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #92400e;
 }
 
 .event-contact {
@@ -1323,6 +1360,11 @@ p {
   color: var(--red-dark);
 }
 
+.status-enrolled {
+  background: #fef3c7;
+  color: #b45309;
+}
+
 .live-new {
   font-size: 8.5px;
   font-weight: 800;
@@ -1373,6 +1415,11 @@ p {
 .badge-unknown {
   background: var(--red-soft);
   color: var(--red-dark);
+}
+
+.badge-enrolled {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .badge-muted {
@@ -1850,6 +1897,15 @@ p {
   place-items: center;
   background: var(--red-soft);
   color: var(--red);
+}
+
+.table-avatar-info {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .table-person strong {

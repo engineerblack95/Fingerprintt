@@ -22,8 +22,10 @@ def build_entry_payload(log) -> dict:
         }
     return {
         "type": "entry_event",
+        "id": log.pk,
         "status": log.status,
         "member": member,
+        "hardware_slot": log.hardware_slot,
         "device": {"location_name": log.device.location_name},
         "timestamp": log.timestamp.isoformat(),
     }
