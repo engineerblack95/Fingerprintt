@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security Alert</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eef2f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Security alert: an unknown person was detected at {{ location }}.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef2f7;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="width:100%;max-width:620px;background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #fecaca;">
+          <tr>
+            <td style="background-color:#dc2626;padding:30px 32px;">
+              <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#fee2e2;font-weight:600;">Fingerprint Access Control</div>
+              <div style="font-size:27px;line-height:1.2;font-weight:800;color:#ffffff;margin-top:8px;">🚨 Security Alert</div>
+              <div style="font-size:14px;color:#fee2e2;margin-top:8px;">{{ location }} &middot; {{ timestamp }}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <div style="border:1px solid #fecaca;background-color:#fef2f2;border-radius:14px;padding:24px;text-align:center;">
+                <div style="font-size:44px;line-height:1;">🚨</div>
+                <div style="font-size:22px;font-weight:800;color:#b91c1c;margin-top:12px;letter-spacing:0.5px;">UNKNOWN PERSON DETECTED</div>
+                <div style="font-size:14px;color:#991b1b;margin-top:8px;">No fingerprint match was found on the device.</div>
+              </div>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;">
+                <tr>
+                  <td style="padding:20px 22px;">
+                    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;font-weight:700;">Incident details</div>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;font-size:14px;">
+                      <tr>
+                        <td style="padding:6px 0;color:#64748b;width:120px;">Location</td>
+                        <td style="padding:6px 0;color:#0f172a;font-weight:600;">{{ location }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#64748b;">Timestamp</td>
+                        <td style="padding:6px 0;color:#0f172a;font-weight:600;">{{ timestamp }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#64748b;">Status</td>
+                        <td style="padding:6px 0;color:#b91c1c;font-weight:800;">UNKNOWN / INTRUDER</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="margin-top:20px;border-left:4px solid #f59e0b;background-color:#fffbeb;border-radius:0 10px 10px 0;padding:16px 18px;font-size:13px;line-height:1.6;color:#92400e;">
+                <strong>Note:</strong> No registered profile found — no image, name, or contact available.
+              </div>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:26px;">
+                <tr>
+                  <td style="background-color:#dc2626;border-radius:10px;">
+                    <a href="{{ dashboard_url }}" style="display:inline-block;padding:13px 24px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Open the dashboard &rarr;</a>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="margin-top:24px;font-size:13px;line-height:1.6;color:#64748b;">
+                Review the live event feed and the full entry history to decide whether further action is required.
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f8fafc;border-top:1px solid #e2e8f0;padding:18px 32px;font-size:12px;color:#94a3b8;">
+              Fingerprint Access Control &middot; Privacy-preserving edge matching &middot; No fingerprint images are stored.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
