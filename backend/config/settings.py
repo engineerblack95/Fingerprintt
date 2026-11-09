@@ -9,6 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 import os
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
@@ -66,6 +67,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",          # serve static files in prod
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -96,20 +98,19 @@ ASGI_APPLICATION = "config.asgi.application"
 
 # ---------------------------------------------------------------------------
 # Database - PostgreSQL only
+#
+# Reads DATABASE_URL if present (Render provides this automatically).
+# Otherwise falls back to individual DB_* env vars (local development).
 # ---------------------------------------------------------------------------
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME", "fingerprint_db"),
-        "USER": env("DB_USER", "postgres"),
-        "PASSWORD": env("DB_PASSWORD"),
-        "HOST": env("DB_HOST", "localhost"),
-        "PORT": env("DB_PORT", "5432"),
-        "CONN_MAX_AGE": int(env("DB_CONN_MAX_AGE", "60")),
-        "OPTIONS": {
-            "connect_timeout": 10,
-        },
-    }
+    "default": dj_database_url.config(
+        default=(
+            f"postgres://{env('DB_USER', 'postgres')}:{env('DB_PASSWORD', '')}"
+            f"@{env('DB_HOST', 'localhost')}:{env('DB_PORT', '5432')}"
+            f"/{env('DB_NAME', 'fingerprint_db')}"
+        ),
+        conn_max_age=int(env("DB_CONN_MAX_AGE", "60")),
+    )
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -149,6 +150,8 @@ USE_TZ = True
 # ---------------------------------------------------------------------------
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
