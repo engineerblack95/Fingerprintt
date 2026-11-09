@@ -98,9 +98,6 @@ ASGI_APPLICATION = "config.asgi.application"
 
 # ---------------------------------------------------------------------------
 # Database - PostgreSQL only
-#
-# Reads DATABASE_URL if present (Render provides this automatically).
-# Otherwise falls back to individual DB_* env vars (local development).
 # ---------------------------------------------------------------------------
 DATABASES = {
     "default": dj_database_url.config(
@@ -120,9 +117,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ---------------------------------------------------------------------------
 AUTH_USER_MODEL = "accounts.User"
 
-# Argon2id is the recommended password hash. It is memory-hard, so it resists
-# GPU cracking far better than PBKDF2 while staying fast enough for interactive
-# logins. Older PBKDF2 hashes are upgraded automatically on next login.
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.Argon2PasswordHasher",
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
@@ -155,7 +149,6 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Uploaded profile photos are small. Keep request bodies bounded.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 
@@ -206,7 +199,6 @@ if REDIS_URL:
         }
     }
 else:
-    # Single-process development fallback. Use Redis in production.
     CHANNEL_LAYERS = {
         "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
     }
@@ -228,8 +220,11 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
     "x-device-api-key",
 ]
+
+# Added your Render backend URL to the default trusted origins
 CSRF_TRUSTED_ORIGINS = env_list(
-    "CSRF_TRUSTED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    "CSRF_TRUSTED_ORIGINS", 
+    "http://localhost:5173,http://127.0.0.1:5173,https://fingerprint-backend-7032.onrender.com"
 )
 
 # ---------------------------------------------------------------------------
@@ -268,8 +263,6 @@ if not TEMPLATE_ENCRYPTION_KEY:
     )
 
 DEVICE_OFFLINE_AFTER_SECONDS = int(env("DEVICE_OFFLINE_AFTER_SECONDS", "120"))
-
-# Maximum accepted fingerprint template payload (base64-decoded bytes).
 MAX_TEMPLATE_BYTES = int(env("MAX_TEMPLATE_BYTES", str(64 * 1024)))
 MAX_PHOTO_BYTES = int(env("MAX_PHOTO_BYTES", str(5 * 1024 * 1024)))
 
@@ -279,6 +272,9 @@ MAX_PHOTO_BYTES = int(env("MAX_PHOTO_BYTES", str(5 * 1024 * 1024)))
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+
+# 🔥 ADDED THIS: Tells Django to trust Render's proxy for HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
