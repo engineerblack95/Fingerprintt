@@ -14,3 +14,4 @@ whitenoise==6.8.2
 gunicorn==23.0.0
 dj-database-url==2.3.0
 reportlab==5.1.0
+cloudinary==1.47.0

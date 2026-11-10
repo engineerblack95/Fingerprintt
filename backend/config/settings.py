@@ -149,6 +149,34 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# ---------------------------------------------------------------------------
+# Media storage - Cloudinary when configured, local disk otherwise
+# ---------------------------------------------------------------------------
+# Render's filesystem is ephemeral, so member photos must live in an external
+# CDN. Set CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name (in .env
+# and on Render) and every Member.photo is uploaded to Cloudinary and served
+# from its CDN instantly in the dashboard, emails and WebSocket payloads.
+# Locally the local filesystem is used when the variable is empty.
+CLOUDINARY_URL = env("CLOUDINARY_URL", "").strip()
+
+if CLOUDINARY_URL:
+    import cloudinary
+    from urllib.parse import unquote, urlparse
+
+    _cloudinary = urlparse(CLOUDINARY_URL)
+    cloudinary.config(
+        cloud_name=_cloudinary.hostname,
+        api_key=unquote(_cloudinary.username or ""),
+        api_secret=unquote(_cloudinary.password or ""),
+        secure=True,
+    )
+    del _cloudinary  # only needed for configuration
+
+    STORAGES = {
+        "default": {"BACKEND": "config.storages.CloudinaryMediaStorage"},
+        "staticfiles": {"BACKEND": STATICFILES_STORAGE},
+    }
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 
@@ -230,9 +258,22 @@ CSRF_TRUSTED_ORIGINS = env_list(
 # ---------------------------------------------------------------------------
 # Email
 # ---------------------------------------------------------------------------
+# Brevo (Sendinblue) SMTP relay is the production transport - it is not blocked
+# on Render and delivers straight to the owner's inbox:
+#     EMAIL_HOST=smtp-relay.brevo.com
+#     EMAIL_PORT=587
+#     EMAIL_USE_TLS=True
+#     EMAIL_HOST_USER=<your Brevo login email or SMTP key id>
+#     EMAIL_HOST_PASSWORD=<your Brevo SMTP key>
+# DEFAULT_FROM_EMAIL must be a sender verified in the Brevo dashboard.
+# Development keeps the console backend when EMAIL_BACKEND is not set.
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
+# Brevo (v3) API key. When present the notifications.brevo_api backend sends a
+# signed HTTPS POST instead of an SMTP session - the most reliable transport on
+# Render. Obtain it at https://app.brevo.com/settings/keys/api
+BREVO_API_KEY = env("BREVO_API_KEY", "").strip()
 EMAIL_HOST = env("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(env("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)

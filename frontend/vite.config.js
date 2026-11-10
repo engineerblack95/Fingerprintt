@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const backendHttp = 'http://127.0.0.1:8000';
+const backendHttp = process.env.DEV_BACKEND_URL || 'http://127.0.0.1:8000';
+const backendWs = backendHttp.replace(/^http/, 'ws');
 
 // The dev server and `vite preview` both need to reach the Django API,
 // uploaded photos and the dashboard WebSocket on the same origin.
@@ -15,7 +16,7 @@ const proxy = {
     changeOrigin: true,
   },
   '/ws': {
-    target: 'ws://127.0.0.1:8000',
+    target: backendWs,
     ws: true,
     changeOrigin: true,
   },

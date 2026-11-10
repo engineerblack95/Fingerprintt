@@ -1,6 +1,4 @@
 import logging
-import os
-from email.mime.image import MIMEImage
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -8,6 +6,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from logs.models import EntryLog
+from members.utils import absolute_photo_url
 
 logger = logging.getLogger(__name__)
 
@@ -15,31 +14,6 @@ logger = logging.getLogger(__name__)
 def _initials(name: str) -> str:
     parts = [part for part in (name or "").split() if part]
     return "".join(part[0].upper() for part in parts[:2]) or "?"
-
-
-def _attach_photo(message: EmailMultiAlternatives, member) -> bool:
-    """Attach the profile photo inline (CID) so it renders in email clients."""
-    if not member or not getattr(member, "photo", None):
-        return False
-    try:
-        member.photo.open("rb")
-        content = member.photo.read()
-        member.photo.close()
-        if not content:
-            return False
-        image = MIMEImage(content)
-        filename = os.path.basename(member.photo.name) or "photo.jpg"
-        image.add_header("Content-ID", "<entry-photo>")
-        image.add_header("Content-Disposition", "inline", filename=filename)
-        message.attach(image)
-        return True
-    except Exception:  # pragma: no cover - never block an alert on a photo
-        logger.exception("Could not attach photo for member %s", getattr(member, "pk", None))
-        try:
-            member.photo.close()
-        except Exception:
-            pass
-        return False
 
 
 def send_entry_notification(log: EntryLog) -> None:
@@ -82,7 +56,9 @@ def send_entry_notification(log: EntryLog) -> None:
             "location": location,
             "timestamp": timestamp,
             "initials": _initials(member.full_name),
-            "has_photo": False,
+            # Cloudinary (or local) URL of the profile photo. Remote https URLs
+            # render directly in the inbox, so no CID attachment is required.
+            "photo_url": absolute_photo_url(member),
         }
         if log.status == EntryLog.Status.VISITOR:
             subject = f"🔵 Visitor Arrived: {member.full_name} at {location}"
@@ -113,14 +89,7 @@ def send_entry_notification(log: EntryLog) -> None:
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[owner_email],
     )
-
-    if log.member is not None and log.status != EntryLog.Status.UNKNOWN:
-        # Attach before rendering so the template only emits the CID image tag
-        # when the attachment really exists.
-        context["has_photo"] = _attach_photo(message, log.member)
-
-    html_body = render_to_string(template, context)
-    message.attach_alternative(html_body, "text/html")
+    message.attach_alternative(render_to_string(template, context), "text/html")
 
     message.send(fail_silently=False)
     logger.info("Sent %s notification for log %s to %s", log.status, log.pk, owner_email)

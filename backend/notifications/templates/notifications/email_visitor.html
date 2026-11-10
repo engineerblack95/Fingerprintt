@@ -23,8 +23,8 @@
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td width="116" valign="top" style="width:116px;">
-                    {% if has_photo %}
-                    <img src="cid:entry-photo" width="112" height="112" alt="{{ member.full_name }}" style="display:block;width:112px;height:112px;object-fit:cover;border-radius:14px;border:3px solid #dbeafe;">
+                    {% if photo_url %}
+                    <img src="{{ photo_url }}" width="112" height="112" alt="{{ member.full_name }}" style="display:block;width:112px;height:112px;object-fit:cover;border-radius:14px;border:3px solid #dbeafe;">
                     {% else %}
                     <div style="width:112px;height:112px;line-height:112px;border-radius:14px;background-color:#dbeafe;color:#1d4ed8;text-align:center;font-size:36px;font-weight:800;">{{ initials }}</div>
                     {% endif %}
