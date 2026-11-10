@@ -9,6 +9,10 @@ def absolute_photo_url(member) -> str | None:
         url = member.photo.url
     except ValueError:
         return None
+    if not url:
+        # The referenced file is gone (e.g. pre-Cloudinary rows on Render);
+        # templates use the initials fallback instead of a broken image.
+        return None
     if url.startswith(("http://", "https://")):
         return url
     base = settings.PUBLIC_BASE_URL.rstrip("/")

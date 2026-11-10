@@ -1,7 +1,11 @@
 import base64
 import binascii
+import logging
+import urllib.error
 
+import cloudinary.exceptions
 from django.conf import settings
+from django.core.exceptions import SuspiciousFileOperation
 from django.db import transaction
 from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
@@ -9,6 +13,8 @@ from rest_framework import serializers
 from .crypto import encrypt_template
 from .models import FingerprintTemplate, Member
 from .utils import absolute_photo_url
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
 ALLOWED_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -117,6 +123,30 @@ class MemberWriteSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value: str) -> str:
         return value.strip().lower()
+
+    def save(self, **kwargs):
+        """Wrap storage/network failures of the photo upload as a clean 400.
+
+        Django persists the file to storage before the database row, so a
+        failed Cloudinary upload leaves no partial data behind.
+        """
+        try:
+            return super().save(**kwargs)
+        except (
+            cloudinary.exceptions.Error,
+            SuspiciousFileOperation,
+            OSError,
+            urllib.error.URLError,
+        ) as exc:
+            logger.exception("Photo upload failed while saving a member.")
+            raise serializers.ValidationError(
+                {
+                    "photo": (
+                        "The photo could not be uploaded to storage. "
+                        "Please try again with a JPEG, PNG or WEBP image."
+                    )
+                }
+            ) from exc
 
     def validate_photo(self, photo):
         if photo is None:
