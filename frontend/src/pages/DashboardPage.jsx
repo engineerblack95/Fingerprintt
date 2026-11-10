@@ -4,6 +4,7 @@ import {
   Activity,
   ArrowRight,
   CalendarDays,
+  FileText,
   RefreshCw,
   Settings,
   ShieldAlert,
@@ -41,12 +42,18 @@ function logToEvent(log) {
     status: log.status,
     member: log.member
       ? {
+          id: log.member.id,
+          username: log.member.username,
           full_name: log.member.full_name,
           phone_number: log.member.phone_number,
           email: log.member.email,
+          role: log.member.role,
           photo_url: log.member.photo_url,
         }
       : null,
+    member_name: log.member_name || '',
+    member_username: log.member_username || '',
+    member_role: log.member_role || '',
     device: log.device ? { location_name: log.device.location_name } : null,
     hardware_slot: log.hardware_slot ?? null,
     timestamp: log.timestamp,
@@ -167,6 +174,14 @@ export function DashboardPage() {
             <span className={`live-pill live-${socketStatus === 'connected' ? 'connected' : socketStatus === 'disconnected' ? 'disconnected' : 'connecting'}`}>
               <span className="live-dot" /> {socketLabel}
             </span>
+            <Link
+              to="/reports"
+              className="btn btn-ghost"
+              title="Download activity reports"
+            >
+              <FileText size={15} />
+              Reports
+            </Link>
             <a
               className="btn btn-ghost"
               href={getAdminUrl()}

@@ -21,8 +21,17 @@ class EntryLog(models.Model):
         null=True,
         blank=True,
         related_name="entry_logs",
-        help_text="Null means the fingerprint did not match any registered profile.",
+        help_text=(
+            "Null means the fingerprint did not match any registered profile, "
+            "or the member was deleted after this event was recorded."
+        ),
     )
+    # Snapshots keep the audit trail readable after a member is deleted. The
+    # foreign key above is SET_NULL, so these fields are the durable record of
+    # who the event belonged to at the time it happened.
+    member_name = models.CharField(max_length=150, blank=True, default="")
+    member_username = models.CharField(max_length=64, blank=True, default="")
+    member_role = models.CharField(max_length=10, blank=True, default="")
     device = models.ForeignKey(
         Device, on_delete=models.PROTECT, related_name="entry_logs"
     )
@@ -49,13 +58,28 @@ class EntryLog(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=(
-                    Q(status__in=["MEMBER", "VISITOR"], member__isnull=False)
-                    | Q(status="UNKNOWN", member__isnull=True)
-                    | Q(status="ENROLLED", member__isnull=True)
+                    # Unknown / enrollment events never reference a Member.
+                    Q(status__in=["UNKNOWN", "ENROLLED"], member__isnull=True)
+                    # Access events normally reference a Member...
+                    | Q(status__in=["MEMBER", "VISITOR"], member__isnull=False)
+                    # ...but the FK is SET_NULL, so after a member is deleted
+                    # the snapshot fields keep the row valid and readable.
+                    | Q(
+                        status__in=["MEMBER", "VISITOR"],
+                        member__isnull=True,
+                        member_name__gt="",
+                    )
                 ),
                 name="entrylog_member_matches_status",
             )
         ]
+
+    @property
+    def display_member_name(self) -> str:
+        """Name to show in the UI, even after the linked member is deleted."""
+        if self.member_id and self.member:
+            return self.member.full_name
+        return self.member_name or "Unknown person"
 
     def __str__(self) -> str:
         if self.status == self.Status.ENROLLED:
@@ -63,5 +87,5 @@ class EntryLog(models.Model):
                 f"Fingerprint enrolled (slot {self.hardware_slot}) "
                 f"@ {self.device.location_name}"
             )
-        who = self.member.full_name if self.member else "Unknown person"
+        who = self.display_member_name
         return f"{who} @ {self.device.location_name} ({self.status})"

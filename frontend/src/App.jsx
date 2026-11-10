@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { MembersPage } from './pages/MembersPage';
 import { LogsPage } from './pages/LogsPage';
 import { DevicesPage } from './pages/DevicesPage';
+import { ReportsPage } from './pages/ReportsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/members" element={<MembersPage />} />
           <Route path="/logs" element={<LogsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/devices" element={<DevicesPage />} />
         </Route>
       </Route>

@@ -15,9 +15,12 @@ def build_entry_payload(log) -> dict:
     member = None
     if log.member_id and log.member:
         member = {
+            "id": log.member_id,
+            "username": log.member.username,
             "full_name": log.member.full_name,
             "phone_number": log.member.phone_number,
             "email": log.member.email,
+            "role": log.member.role,
             "photo_url": absolute_photo_url(log.member),
         }
     return {
@@ -25,6 +28,9 @@ def build_entry_payload(log) -> dict:
         "id": log.pk,
         "status": log.status,
         "member": member,
+        "member_name": log.member_name,
+        "member_username": log.member_username,
+        "member_role": log.member_role,
         "hardware_slot": log.hardware_slot,
         "device": {"location_name": log.device.location_name},
         "timestamp": log.timestamp.isoformat(),

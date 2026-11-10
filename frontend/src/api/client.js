@@ -112,6 +112,7 @@ export const membersApi = {
 
 export const logsApi = {
   list: (params) => api.get('/logs/', { params }),
+  export: (params) => api.get('/logs/export/', { params, responseType: 'blob' }),
 };
 
 export const devicesApi = {

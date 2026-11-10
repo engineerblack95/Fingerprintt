@@ -9,6 +9,7 @@ class EntryLogAdmin(admin.ModelAdmin):
         "timestamp",
         "status",
         "member",
+        "member_name",
         "hardware_slot",
         "device",
         "synced_from_device",
@@ -17,6 +18,8 @@ class EntryLogAdmin(admin.ModelAdmin):
     search_fields = (
         "member__full_name",
         "member__username",
+        "member_name",
+        "member_username",
         "device__location_name",
     )
     date_hierarchy = "timestamp"

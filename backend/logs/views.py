@@ -15,6 +15,7 @@ from devices.utils import online_devices_q
 from members.models import Member
 
 from .models import EntryLog
+from .reports import build_csv_response, build_pdf_response
 from .serializers import EntryLogSerializer
 
 
@@ -33,6 +34,68 @@ def _parse_date_filter(value: str, field: str, end_of_day: bool = False):
     )
 
 
+def filter_entry_logs(queryset, params):
+    """Apply the shared status/date/device/member/search filters.
+
+    Used by both the paginated history API and the CSV/PDF export endpoint so
+    a report always matches exactly what the dashboard is showing.
+    """
+    status_param = params.get("status", "").strip()
+    if status_param:
+        statuses = [item.strip().upper() for item in status_param.split(",") if item.strip()]
+        valid = {choice for choice, _ in EntryLog.Status.choices}
+        invalid = [item for item in statuses if item not in valid]
+        if invalid:
+            raise ValidationError(
+                {"status": f"Invalid status value(s): {', '.join(invalid)}."}
+            )
+        queryset = queryset.filter(status__in=statuses)
+
+    date_from = params.get("date_from", "").strip()
+    if date_from:
+        kind, value = _parse_date_filter(date_from, "date_from")
+        if kind == "date":
+            queryset = queryset.filter(timestamp__date__gte=value)
+        else:
+            queryset = queryset.filter(timestamp__gte=value)
+
+    date_to = params.get("date_to", "").strip()
+    if date_to:
+        kind, value = _parse_date_filter(date_to, "date_to", end_of_day=True)
+        if kind == "date":
+            queryset = queryset.filter(timestamp__date__lte=value)
+        else:
+            queryset = queryset.filter(timestamp__lte=value)
+
+    device_id = params.get("device", "").strip()
+    if device_id:
+        if not device_id.isdigit():
+            raise ValidationError({"device": "device must be a numeric device id."})
+        queryset = queryset.filter(device_id=int(device_id))
+
+    member_id = params.get("member", "").strip()
+    if member_id:
+        if not member_id.isdigit():
+            raise ValidationError({"member": "member must be a numeric member id."})
+        queryset = queryset.filter(member_id=int(member_id))
+
+    synced = params.get("synced", "").strip().lower()
+    if synced in {"true", "false"}:
+        queryset = queryset.filter(synced_from_device=synced == "true")
+
+    search = params.get("search", "").strip()
+    if search:
+        queryset = queryset.filter(
+            Q(member__full_name__icontains=search)
+            | Q(member__username__icontains=search)
+            | Q(member_name__icontains=search)
+            | Q(member_username__icontains=search)
+            | Q(device__location_name__icontains=search)
+        )
+
+    return queryset
+
+
 class EntryLogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     """GET /api/logs/ - paginated history with status/date/device filters."""
 
@@ -41,61 +104,26 @@ class EntryLogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = EntryLog.objects.select_related("member", "device").all()
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        params = self.request.query_params
+        return filter_entry_logs(super().get_queryset(), self.request.query_params)
 
-        status_param = params.get("status", "").strip()
-        if status_param:
-            statuses = [item.strip().upper() for item in status_param.split(",") if item.strip()]
-            valid = {choice for choice, _ in EntryLog.Status.choices}
-            invalid = [item for item in statuses if item not in valid]
-            if invalid:
-                raise ValidationError(
-                    {"status": f"Invalid status value(s): {', '.join(invalid)}."}
-                )
-            queryset = queryset.filter(status__in=statuses)
 
-        date_from = params.get("date_from", "").strip()
-        if date_from:
-            kind, value = _parse_date_filter(date_from, "date_from")
-            if kind == "date":
-                queryset = queryset.filter(timestamp__date__gte=value)
-            else:
-                queryset = queryset.filter(timestamp__gte=value)
+class EntryLogExportView(APIView):
+    """GET /api/logs/export/?filetype=csv|pdf - download the activity report."""
 
-        date_to = params.get("date_to", "").strip()
-        if date_to:
-            kind, value = _parse_date_filter(date_to, "date_to", end_of_day=True)
-            if kind == "date":
-                queryset = queryset.filter(timestamp__date__lte=value)
-            else:
-                queryset = queryset.filter(timestamp__lte=value)
+    permission_classes = [IsAuthenticated]
 
-        device_id = params.get("device", "").strip()
-        if device_id:
-            if not device_id.isdigit():
-                raise ValidationError({"device": "device must be a numeric device id."})
-            queryset = queryset.filter(device_id=int(device_id))
+    def get(self, request):
+        filetype = request.query_params.get("filetype", "csv").strip().lower()
+        if filetype not in {"csv", "pdf"}:
+            raise ValidationError({"filetype": "Use 'csv' or 'pdf'."})
 
-        member_id = params.get("member", "").strip()
-        if member_id:
-            if not member_id.isdigit():
-                raise ValidationError({"member": "member must be a numeric member id."})
-            queryset = queryset.filter(member_id=int(member_id))
-
-        synced = params.get("synced", "").strip().lower()
-        if synced in {"true", "false"}:
-            queryset = queryset.filter(synced_from_device=synced == "true")
-
-        search = params.get("search", "").strip()
-        if search:
-            queryset = queryset.filter(
-                Q(member__full_name__icontains=search)
-                | Q(member__username__icontains=search)
-                | Q(device__location_name__icontains=search)
-            )
-
-        return queryset
+        queryset = filter_entry_logs(
+            EntryLog.objects.select_related("member", "device").all(),
+            request.query_params,
+        )
+        if filetype == "pdf":
+            return build_pdf_response(queryset)
+        return build_csv_response(queryset)
 
 
 class DashboardStatsView(APIView):

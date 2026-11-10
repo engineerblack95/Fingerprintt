@@ -239,6 +239,12 @@ export function LogsPage() {
                   const photoUrl = resolveMediaUrl(log.member?.photo_url);
                   const isEnrolled = log.status === 'ENROLLED';
                   const enrolledSlot = log.hardware_slot ?? '—';
+                  const displayName =
+                    log.member?.full_name || log.member_name || 'Unknown person';
+                  const displayUsername = log.member?.username || log.member_username || '';
+                  const displayEmail = log.member?.email || '';
+                  const roleLabel = STATUS_META[log.member_role]?.label || log.member_role || '';
+                  const hasPerson = Boolean(log.member || log.member_name);
                   return (
                     <tr key={log.id}>
                       <td>
@@ -246,12 +252,12 @@ export function LogsPage() {
                           <div className={`table-avatar ${isEnrolled ? 'table-avatar-info' : ''}`}>
                             {isEnrolled ? (
                               <Wrench size={16} />
-                            ) : log.member ? (
+                            ) : hasPerson ? (
                               photoUrl ? (
-                                <img src={photoUrl} alt={log.member.full_name} loading="lazy" />
+                                <img src={photoUrl} alt={displayName} loading="lazy" />
                               ) : (
                                 <span className="avatar avatar-photo">
-                                  {initials(log.member.full_name)}
+                                  {initials(displayName)}
                                 </span>
                               )
                             ) : (
@@ -264,16 +270,18 @@ export function LogsPage() {
                             <strong>
                               {isEnrolled
                                 ? `Fingerprint enrolled · slot ${enrolledSlot}`
-                                : log.member
-                                  ? log.member.full_name
-                                  : 'Unknown person'}
+                                : displayName}
                             </strong>
                             <span>
                               {isEnrolled
                                 ? '🔧 Hardware update from device'
-                                : log.member
-                                  ? `@${log.member.username} · ${log.member.email}`
-                                  : 'No registered profile found'}
+                                : displayUsername || displayEmail
+                                  ? [displayUsername ? `@${displayUsername}` : '', displayEmail]
+                                      .filter(Boolean)
+                                      .join(' · ')
+                                  : hasPerson
+                                    ? `${roleLabel || 'Member'} · profile removed`
+                                    : 'No registered profile found'}
                             </span>
                           </div>
                         </div>

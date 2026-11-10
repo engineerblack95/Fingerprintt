@@ -8,6 +8,7 @@ export function EventCard({ event, isNew = false }) {
   const status = event.status || 'UNKNOWN';
   const meta = STATUS_META[status] || STATUS_META.UNKNOWN;
   const member = event.member;
+  const memberName = member?.full_name || event.member_name || '';
   const location = event.device?.location_name || 'Unknown location';
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -44,7 +45,7 @@ export function EventCard({ event, isNew = false }) {
     );
   }
 
-  if (status === 'UNKNOWN' || !member) {
+  if (status === 'UNKNOWN' || !memberName) {
     return (
       <article className={`event-card event-unknown ${isNew ? 'is-new' : ''}`}>
         <div className="event-icon event-icon-danger">
@@ -74,7 +75,9 @@ export function EventCard({ event, isNew = false }) {
     );
   }
 
-  const photoUrl = resolveMediaUrl(member.photo_url);
+  const photoUrl = member ? resolveMediaUrl(member.photo_url) : '';
+  const phoneNumber = member?.phone_number || '';
+  const email = member?.email || '';
 
   return (
     <article className={`event-card event-${status.toLowerCase()} ${isNew ? 'is-new' : ''}`}>
@@ -82,20 +85,20 @@ export function EventCard({ event, isNew = false }) {
         {photoUrl && !imageFailed ? (
           <img
             src={photoUrl}
-            alt={member.full_name}
+            alt={memberName}
             onError={() => setImageFailed(true)}
             loading="lazy"
           />
         ) : (
           <span className={`avatar avatar-photo fallback-${status.toLowerCase()}`}>
-            {initials(member.full_name)}
+            {initials(memberName)}
           </span>
         )}
       </div>
 
       <div className="event-body">
         <div className="event-topline">
-          <span className="event-title">{member.full_name}</span>
+          <span className="event-title">{memberName}</span>
           <span className={`badge badge-${status.toLowerCase()}`}>
             <span className="badge-dot" />
             {meta.label}
@@ -103,14 +106,20 @@ export function EventCard({ event, isNew = false }) {
           {isNew ? <span className="live-new">NEW</span> : null}
         </div>
 
-        <div className="event-contact">
-          <span className="meta-item">
-            <Phone size={13} /> {member.phone_number}
-          </span>
-          <span className="meta-item">
-            <Mail size={13} /> {member.email}
-          </span>
-        </div>
+        {phoneNumber || email ? (
+          <div className="event-contact">
+            {phoneNumber ? (
+              <span className="meta-item">
+                <Phone size={13} /> {phoneNumber}
+              </span>
+            ) : null}
+            {email ? (
+              <span className="meta-item">
+                <Mail size={13} /> {email}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="event-meta">
           <span className="meta-item">

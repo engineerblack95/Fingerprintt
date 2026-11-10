@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ExternalLink,
+  FileText,
   Fingerprint,
   LayoutDashboard,
   LogOut,
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/members', label: 'Members', icon: Users },
   { to: '/logs', label: 'Entry logs', icon: ScrollText },
+  { to: '/reports', label: 'Reports', icon: FileText },
   { to: '/devices', label: 'Devices', icon: Router },
 ];
 
