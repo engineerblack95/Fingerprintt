@@ -1230,7 +1230,7 @@ p {
 
 .event-media {
   position: relative;
-  height: 168px;
+  height: 124px;
   overflow: hidden;
   background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
   flex: 0 0 auto;
@@ -1256,13 +1256,8 @@ p {
 .event-media img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 32%;
-  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.event-card:hover .event-media img {
-  transform: scale(1.07);
+  object-fit: contain;
+  object-position: center;
 }
 
 .event-scrim {
@@ -1289,13 +1284,13 @@ p {
 }
 
 .event-initials {
-  width: 66px;
-  height: 66px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 800;
   letter-spacing: 0.02em;
   border: 3px solid rgba(255, 255, 255, 0.9);
@@ -1319,8 +1314,8 @@ p {
 }
 
 .event-hero-icon {
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -1348,8 +1343,8 @@ p {
 
 .event-radar i {
   position: absolute;
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 1.5px solid rgba(220, 38, 38, 0.5);
   animation: radarPulse 2.4s ease-out infinite;
@@ -3449,7 +3444,7 @@ p {
   }
 
   .event-media {
-    height: 150px;
+    height: 108px;
   }
 
   .page-foot {
@@ -3478,7 +3473,7 @@ p {
   }
 
   .event-media {
-    height: 132px;
+    height: 94px;
   }
 
   .event-body {
@@ -3490,14 +3485,14 @@ p {
   }
 
   .event-initials {
-    width: 56px;
-    height: 56px;
-    font-size: 18px;
+    width: 46px;
+    height: 46px;
+    font-size: 15px;
   }
 
   .event-hero-icon {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
   }
 
   .event-contact {
