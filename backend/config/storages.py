@@ -15,6 +15,15 @@ database). Nothing that calls ``.url()`` may therefore ever blow up a request:
 the initials fallback) and the missing resource is negatively cached for
 ``MISSING_TTL_SECONDS`` so list endpoints never hammer the Admin API.
 
+Offline behaviour
+-----------------
+When there is no internet (or Cloudinary is unreachable) the project must keep
+running locally. Network/server failures are treated the same way as missing
+resources - they never raise out of ``url()``/``exists()`` - and new uploads
+are mirrored to ``MEDIA_ROOT`` so member creation keeps working offline.
+Locally stored files are served through ``MEDIA_URL``; everything is
+transparently pushed to Cloudinary the next time it is uploaded online.
+
 Delivery URLs MUST include the resource version (this account is provisioned
 with dynamic folders); versions are captured on upload and cached
 per-process, falling back to a single Admin API lookup.
@@ -31,6 +40,8 @@ from urllib.request import urlopen
 import cloudinary.api
 import cloudinary.uploader
 import cloudinary.utils
+from cloudinary.exceptions import GeneralError
+from django.conf import settings
 from django.core.exceptions import SuspiciousFileOperation
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
@@ -39,6 +50,14 @@ from django.utils.deconstruct import deconstructible
 logger = logging.getLogger(__name__)
 
 MISSING_TTL_SECONDS = 300
+# Transient failures (offline, Cloudinary 5xx) are retried sooner than
+# confirmed-deleted resources.
+UNAVAILABLE_TTL_SECONDS = 60
+
+# cloudinary's SDK wraps socket/DNS failures in GeneralError ("Socket Error"),
+# and OS-level connection issues surface as OSError subclasses (URLError,
+# gaierror, TimeoutError...).
+NETWORK_ERRORS = (GeneralError, OSError)
 
 
 def _ensure_safe(name: str) -> str:
@@ -68,41 +87,90 @@ class CloudinaryMediaStorage(Storage):
         self._versions: dict[str, int] = {}
         # public id -> monotonic time the absence was confirmed
         self._missing: dict[str, float] = {}
+        # public id -> monotonic time a transient network/server error hit
+        self._unavailable: dict[str, float] = {}
+        # public ids stored on the local disk because the cloud was unreachable
+        self._local_only: set[str] = set()
         super().__init__(*args, **kwargs)
 
     # ------------------------------------------------------------------ write
     def _save(self, name, content):
         stem, _ = _split_name(name)
-        result = cloudinary.uploader.upload(
-            content,
-            public_id=stem,
-            resource_type=self.resource_type,
-            type="upload",
-            overwrite=True,
-            invalidate=True,
-            use_filename=False,
-            unique_filename=False,
-        )
+        try:
+            result = cloudinary.uploader.upload(
+                content,
+                public_id=stem,
+                resource_type=self.resource_type,
+                type="upload",
+                overwrite=True,
+                invalidate=True,
+                use_filename=False,
+                unique_filename=False,
+            )
+        except NETWORK_ERRORS as exc:
+            # No internet / Cloudinary unreachable: mirror the file to
+            # MEDIA_ROOT so member creation keeps working locally. It can be
+            # re-uploaded later with `sync_media_to_cloudinary`.
+            logger.warning(
+                "Cloudinary unreachable (%s); storing %r on the local disk "
+                "instead.", exc, stem,
+            )
+            self._versions.pop(stem, None)
+            self._local_only.add(stem)
+            return self._write_local_copy(name, content)
         version = int(result["version"])
         self._versions[result["public_id"]] = version
         self._missing.pop(stem, None)
+        self._unavailable.pop(stem, None)
+        self._local_only.discard(stem)
         # Keep the actual uploaded format (e.g. .jfif stored as .jpg) in the
         # name so ``url()`` can rebuild the correct CDN link from the stored
         # value alone.
         return f"{result['public_id']}.{result['format']}"
 
+    def _write_local_copy(self, name, content) -> str:
+        from django.core.files.storage import FileSystemStorage
+
+        if hasattr(content, "seek"):
+            try:
+                content.seek(0)
+            except (OSError, ValueError):
+                pass
+        local = FileSystemStorage(location=str(settings.MEDIA_ROOT))
+        return local.save(name, content)
+
+    # ------------------------------------------------------------- local disk
+    def _local_path(self, name: str):
+        safe = _ensure_safe(name)
+        return os.path.join(str(settings.MEDIA_ROOT), *safe.split("/"))
+
+    def _has_local_copy(self, name: str) -> bool:
+        path = self._local_path(name)
+        return bool(path) and os.path.isfile(path)
+
     # ------------------------------------------------------------------ read
     def _lookup_version(self, name: str) -> int | None:
-        """Delivery version of a stored name, or None when the file is gone."""
+        """Delivery version of a stored name, or None when it can't be served.
+
+        Returns None both when the resource is confirmed gone and when the
+        cloud is unreachable - callers degrade gracefully either way.
+        """
         stem, _ = _split_name(name)
         version = self._versions.get(stem)
         if version is not None:
             return version
 
+        now = time.monotonic()
         marked_missing = self._missing.get(stem)
         if (
             marked_missing is not None
-            and time.monotonic() - marked_missing < MISSING_TTL_SECONDS
+            and now - marked_missing < MISSING_TTL_SECONDS
+        ):
+            return None
+        marked_unavailable = self._unavailable.get(stem)
+        if (
+            marked_unavailable is not None
+            and now - marked_unavailable < UNAVAILABLE_TTL_SECONDS
         ):
             return None
 
@@ -117,15 +185,27 @@ class CloudinaryMediaStorage(Storage):
                 "initials placeholder for it.", stem,
             )
             return None
+        except NETWORK_ERRORS as exc:
+            self._unavailable[stem] = time.monotonic()
+            logger.warning(
+                "Cloudinary is unreachable (%s); serving %r without a photo "
+                "for now.", exc, stem,
+            )
+            return None
         version = int(resource["version"])
         self._missing.pop(stem, None)
+        self._unavailable.pop(stem, None)
         self._versions[stem] = version
         return version
 
     def exists(self, name) -> bool:
-        return self._lookup_version(name) is not None
+        return self._has_local_copy(name) or self._lookup_version(name) is not None
 
     def url(self, name):
+        # Files mirrored locally (offline uploads / restarts) are served from
+        # the local development server so no network round trip is needed.
+        if self._has_local_copy(name):
+            return f"{settings.MEDIA_URL.rstrip('/')}/{_ensure_safe(name)}"
         version = self._lookup_version(name)
         if version is None:
             # A row referencing a photo that is not (yet) in the cloud must
@@ -146,6 +226,9 @@ class CloudinaryMediaStorage(Storage):
     def _open(self, name, mode="rb"):
         if mode != "rb":
             raise ValueError("Cloudinary storage only supports binary reads.")
+        local_path = self._local_path(name)
+        if local_path and os.path.isfile(local_path):
+            return open(local_path, "rb")
         version = self._lookup_version(name)
         if version is None:
             raise FileNotFoundError(f"Cloudinary resource not found: {name}")
@@ -166,6 +249,9 @@ class CloudinaryMediaStorage(Storage):
         return url
 
     def size(self, name) -> int:
+        local_path = self._local_path(name)
+        if local_path and os.path.isfile(local_path):
+            return os.path.getsize(local_path)
         stem, _ = _split_name(name)
         try:
             resource = cloudinary.api.resource(
@@ -173,6 +259,11 @@ class CloudinaryMediaStorage(Storage):
             )
         except cloudinary.api.NotFound:
             raise FileNotFoundError(f"Cloudinary resource not found: {name}") from None
+        except NETWORK_ERRORS as exc:
+            logger.warning("Cloudinary is unreachable (%s); size unavailable.", exc)
+            raise FileNotFoundError(
+                f"Cloudinary resource temporarily unavailable: {name}"
+            ) from None
         return int(resource.get("bytes", 0))
 
     # ---------------------------------------------------------------- delete
@@ -180,9 +271,22 @@ class CloudinaryMediaStorage(Storage):
         stem, _ = _split_name(name)
         self._versions.pop(stem, None)
         self._missing.pop(stem, None)
-        result = cloudinary.uploader.destroy(
-            stem, resource_type=self.resource_type, type="upload", invalidate=True
-        )
+        self._unavailable.pop(stem, None)
+        self._local_only.discard(stem)
+        removed_local = False
+        local_path = self._local_path(name)
+        if local_path and os.path.isfile(local_path):
+            os.remove(local_path)
+            removed_local = True
+        try:
+            result = cloudinary.uploader.destroy(
+                stem, resource_type=self.resource_type, type="upload", invalidate=True
+            )
+        except NETWORK_ERRORS as exc:
+            logger.warning(
+                "Cloudinary unreachable (%s); removed %r locally only.", exc, stem
+            )
+            return removed_local
         return result.get("result") == "ok"
 
     # ------------------------------------------------------------ unsupported
