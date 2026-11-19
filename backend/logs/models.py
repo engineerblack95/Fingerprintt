@@ -47,6 +47,14 @@ class EntryLog(models.Model):
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
     synced_from_device = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    notification_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "When the owner email alert for this event was successfully "
+            "delivered. Null means no alert was sent (or it failed)."
+        ),
+    )
 
     class Meta:
         ordering = ["-timestamp"]

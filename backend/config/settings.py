@@ -267,13 +267,23 @@ CSRF_TRUSTED_ORIGINS = env_list(
 #     EMAIL_HOST_PASSWORD=<your Brevo SMTP key>
 # DEFAULT_FROM_EMAIL must be a sender verified in the Brevo dashboard.
 # Development keeps the console backend when EMAIL_BACKEND is not set.
-EMAIL_BACKEND = env(
-    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
-)
 # Brevo (v3) API key. When present the notifications.brevo_api backend sends a
 # signed HTTPS POST instead of an SMTP session - the most reliable transport on
 # Render. Obtain it at https://app.brevo.com/settings/keys/api
 BREVO_API_KEY = env("BREVO_API_KEY", "").strip()
+
+# A deployment that has a Brevo key must never silently fall back to the
+# console backend (which prints emails to the server log instead of sending
+# them). The Brevo API backend therefore becomes the default whenever a key is
+# configured; an explicit EMAIL_BACKEND always wins.
+_DEFAULT_EMAIL_BACKEND = (
+    "notifications.brevo_api.BrevoAPIEmailBackend"
+    if BREVO_API_KEY
+    else "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_BACKEND = (
+    env("EMAIL_BACKEND", "").strip() or _DEFAULT_EMAIL_BACKEND
+)
 EMAIL_HOST = env("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(env("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
@@ -285,6 +295,9 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL", "Fingerprint Access <noreply@example.com>"
 )
 OWNER_EMAIL = env("OWNER_EMAIL", "")
+# Only events at most this old trigger an owner alert. Importing or back-filling
+# history must never flood the inbox; live device events are always within it.
+EMAIL_MAX_EVENT_AGE_MINUTES = int(env("EMAIL_MAX_EVENT_AGE_MINUTES", "15"))
 
 # ---------------------------------------------------------------------------
 # Project-specific security / device settings

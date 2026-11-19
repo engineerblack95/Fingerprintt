@@ -61,16 +61,11 @@ def _dispatch(log_id: int) -> None:
     except Exception:  # pragma: no cover - side-effect guard
         logger.exception("Failed to broadcast entry event %s", log_id)
 
+    # Email alerts are handled centrally by logs.signals -> notifications.dispatch
+    # so that every creation path (device API, Django admin, shell) notifies the
+    # owner exactly once.
     if log.status == EntryLog.Status.ENROLLED:
         logger.info(
             "New fingerprint enrolled on hardware for Member ID: %s",
             log.hardware_slot,
         )
-        return
-
-    try:
-        from notifications.emails import send_entry_notification
-
-        send_entry_notification(log)
-    except Exception:  # pragma: no cover - side-effect guard
-        logger.exception("Failed to send entry notification for log %s", log_id)

@@ -16,22 +16,38 @@ def _initials(name: str) -> str:
     return "".join(part[0].upper() for part in parts[:2]) or "?"
 
 
-def send_entry_notification(log: EntryLog) -> None:
-    """Send the HTML alert for one entry event to the owner."""
+def send_entry_notification(log: EntryLog) -> bool:
+    """Send the HTML alert for one entry event to the owner.
+
+    Returns True when the message was handed to the email backend, False when
+    the event was intentionally skipped (enrollment, missing configuration,
+    deleted-member row). Delivery errors propagate to the caller so they are
+    logged with a full traceback.
+    """
     if log.status == EntryLog.Status.ENROLLED:
         logger.info("Skipping email for hardware enrollment log %s", log.pk)
-        return
+        return False
 
     owner_email = (settings.OWNER_EMAIL or "").strip()
     if not owner_email:
-        logger.warning("OWNER_EMAIL is not configured; skipping notification.")
-        return
+        logger.error(
+            "OWNER_EMAIL is not configured; entry alerts cannot be sent. "
+            "Set OWNER_EMAIL in the environment."
+        )
+        return False
 
     local_time = timezone.localtime(log.timestamp)
     timestamp = local_time.strftime("%A, %d %B %Y at %H:%M %Z")
     location = log.device.location_name
 
     if log.status == EntryLog.Status.UNKNOWN or log.member is None:
+        if log.member is None and log.member_name:
+            # The member was deleted after the event; there is no profile to
+            # render, so an intruder alert would be misleading.
+            logger.info(
+                "Skipping email for log %s: member profile was deleted.", log.pk
+            )
+            return False
         subject = f"🚨 SECURITY ALERT: Unknown person at {location}"
         template = "notifications/email_unknown.html"
         context = {
@@ -93,3 +109,4 @@ def send_entry_notification(log: EntryLog) -> None:
 
     message.send(fail_silently=False)
     logger.info("Sent %s notification for log %s to %s", log.status, log.pk, owner_email)
+    return True

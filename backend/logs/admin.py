@@ -13,6 +13,7 @@ class EntryLogAdmin(admin.ModelAdmin):
         "hardware_slot",
         "device",
         "synced_from_device",
+        "notification_sent_at",
     )
     list_filter = ("status", "synced_from_device", "device")
     search_fields = (
@@ -23,5 +24,5 @@ class EntryLogAdmin(admin.ModelAdmin):
         "device__location_name",
     )
     date_hierarchy = "timestamp"
-    readonly_fields = ("created_at",)
+    readonly_fields = ("created_at", "notification_sent_at")
     ordering = ("-timestamp",)
