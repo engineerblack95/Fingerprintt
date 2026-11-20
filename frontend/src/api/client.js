@@ -98,7 +98,10 @@ export function getFieldErrors(error) {
 
 export const authApi = {
   login: (payload) => api.post('/auth/login/', payload),
+  register: (payload) => api.post('/auth/register/', payload),
   me: () => api.get('/auth/me/'),
+  requestPasswordReset: (payload) => api.post('/auth/password-reset/', payload),
+  confirmPasswordReset: (payload) => api.post('/auth/password-reset/confirm/', payload),
 };
 
 export const membersApi = {

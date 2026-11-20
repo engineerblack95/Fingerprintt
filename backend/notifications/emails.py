@@ -110,3 +110,58 @@ def send_entry_notification(log: EntryLog) -> bool:
     message.send(fail_silently=False)
     logger.info("Sent %s notification for log %s to %s", log.status, log.pk, owner_email)
     return True
+
+
+def send_password_reset_email(user, reset_url: str) -> bool:
+    """Email a single-use password reset link to ``user``.
+
+    Returns True when the message was handed to the email backend. Errors
+    propagate so the caller can log them; the API never reveals them.
+    """
+    recipient = (user.email or "").strip()
+    if not recipient:
+        logger.error(
+            "User %s has no email address; password reset cannot be sent.",
+            user.pk,
+        )
+        return False
+
+    full_name = user.get_full_name() or user.username
+    timeout_seconds = int(getattr(settings, "PASSWORD_RESET_TIMEOUT", 3600))
+    expires_minutes = max(1, timeout_seconds // 60)
+    requested_at = timezone.localtime().strftime("%A, %d %B %Y at %H:%M %Z")
+
+    context = {
+        "user": user,
+        "full_name": full_name,
+        "reset_url": reset_url,
+        "expires_minutes": expires_minutes,
+        "requested_at": requested_at,
+        "frontend_url": settings.FRONTEND_URL,
+    }
+
+    subject = "🔐 Reset your Fingerprint Access password"
+    text_body = (
+        f"Hello {full_name},\n\n"
+        "We received a request to reset the password for your Fingerprint "
+        "Access Control account.\n\n"
+        f"Reset your password here (valid for {expires_minutes} minutes):\n"
+        f"{reset_url}\n\n"
+        "If you did not request this, you can safely ignore this email - your "
+        "password will not change.\n\n"
+        f"Requested: {requested_at}\n"
+    )
+
+    message = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[recipient],
+    )
+    message.attach_alternative(
+        render_to_string("notifications/password_reset.html", context),
+        "text/html",
+    )
+    message.send(fail_silently=False)
+    logger.info("Sent password reset email to %s", recipient)
+    return True

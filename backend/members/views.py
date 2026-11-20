@@ -6,6 +6,8 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.permissions import IsAdminOrReadOnly
+
 from .models import FingerprintTemplate, Member
 from .serializers import (
     EnrollSerializer,
@@ -17,7 +19,7 @@ from .serializers import (
 class MemberViewSet(viewsets.ModelViewSet):
     """Owner-facing CRUD for registered members and visitors."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Member.objects.prefetch_related("fingerprints").all()
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Search, UserPlus, Users } from 'lucide-react';
 
 import { getErrorMessage, membersApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { PAGE_SIZE } from '../utils/constants';
 import { PageHeader } from '../components/PageHeader';
@@ -21,6 +22,8 @@ const ROLE_TABS = [
 
 export function MembersPage() {
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
   const [members, setMembers] = useState([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -122,9 +125,15 @@ export function MembersPage() {
         title="Members & visitors"
         subtitle="Registered family, staff and pre-enrolled visitors. Fingerprints stay on the device."
         actions={
-          <button type="button" className="btn btn-primary" onClick={openCreate}>
-            <Plus size={16} /> Register person
-          </button>
+          isAdmin ? (
+            <button type="button" className="btn btn-primary" onClick={openCreate}>
+              <Plus size={16} /> Register person
+            </button>
+          ) : (
+            <span className="access-pill">
+              <Users size={14} /> View only
+            </span>
+          )
         }
       />
 
@@ -173,6 +182,7 @@ export function MembersPage() {
               <MemberCard
                 key={member.id}
                 member={member}
+                canManage={isAdmin}
                 onEdit={openEdit}
                 onDelete={setConfirmMember}
                 onEnroll={handleEnroll}
@@ -199,7 +209,7 @@ export function MembersPage() {
                 : 'Register a family member, staff member or pre-enrolled visitor to get started.'
             }
             action={
-              !search && !roleFilter ? (
+              isAdmin && !search && !roleFilter ? (
                 <button type="button" className="btn btn-primary" onClick={openCreate}>
                   <Users size={16} /> Register the first person
                 </button>

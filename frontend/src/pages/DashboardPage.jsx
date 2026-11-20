@@ -150,6 +150,7 @@ export function DashboardPage() {
   const totalDevices = data.devices?.total || 0;
   const onlinePercent = totalDevices ? Math.round((onlineDevices / totalDevices) * 100) : 0;
   const displayName = user?.full_name || user?.username || 'Owner';
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
 
   const socketLabel = {
     connected: 'Live',
@@ -182,16 +183,18 @@ export function DashboardPage() {
               <FileText size={15} />
               Reports
             </Link>
-            <a
-              className="btn btn-ghost"
-              href={getAdminUrl()}
-              target="_blank"
-              rel="noreferrer"
-              title="Open the Django admin dashboard"
-            >
-              <Settings size={15} />
-              Django admin
-            </a>
+            {isAdmin ? (
+              <a
+                className="btn btn-ghost"
+                href={getAdminUrl()}
+                target="_blank"
+                rel="noreferrer"
+                title="Open the Django admin dashboard"
+              >
+                <Settings size={15} />
+                Django admin
+              </a>
+            ) : null}
             <button
               type="button"
               className="btn btn-ghost"

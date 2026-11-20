@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
@@ -140,6 +140,13 @@ export function LoginPage() {
 
           <ErrorBanner message={error} />
 
+          {location.state?.passwordReset ? (
+            <div className="auth-flash">
+              <ShieldCheck size={16} />
+              <span>Your password was updated. Sign in with your new password.</span>
+            </div>
+          ) : null}
+
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             <label className="field">
               <span className="field-label">Username</span>
@@ -182,11 +189,27 @@ export function LoginPage() {
               </div>
             </label>
 
+            <div className="login-form-meta">
+              <span className="login-form-note">
+                <ShieldCheck size={12} /> Secured session
+              </span>
+              <Link className="login-link" to="/forgot-password">
+                Forgot password?
+              </Link>
+            </div>
+
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
               {loading ? <Spinner size={17} /> : <LockKeyhole size={16} />}
               {loading ? 'Signing in…' : 'Sign in to dashboard'}
             </button>
           </form>
+
+          <div className="auth-switch">
+            <span>New to Fingerprint Access?</span>
+            <Link className="login-link" to="/register">
+              Create an account
+            </Link>
+          </div>
 
           <div className="login-card-foot">
             <LockKeyhole size={13} /> JWT-secured session · access tokens rotate automatically

@@ -200,7 +200,18 @@ REST_FRAMEWORK = {
         ),
     ),
     "EXCEPTION_HANDLER": "config.exceptions.api_exception_handler",
+    # Scoped limits keep the public password-reset endpoints from being used to
+    # spam the owner's inbox or to brute-force reset tokens.
+    "DEFAULT_THROTTLE_RATES": {
+        "password_reset": env("PASSWORD_RESET_REQUEST_RATE", "5/hour"),
+        "password_reset_confirm": env("PASSWORD_RESET_CONFIRM_RATE", "10/hour"),
+        "register": env("REGISTER_RATE", "5/hour"),
+    },
 }
+
+# Password reset links stay valid for one hour by default. Tokens are also
+# single-use: Django invalidates them as soon as the password changes.
+PASSWORD_RESET_TIMEOUT = int(env("PASSWORD_RESET_TIMEOUT_SECONDS", "3600"))
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(env("JWT_ACCESS_MINUTES", "60"))),

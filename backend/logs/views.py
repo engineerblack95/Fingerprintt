@@ -10,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.permissions import IsAdministrator
 from devices.models import Device
 from devices.utils import online_devices_q
 from members.models import Member
@@ -110,7 +111,7 @@ class EntryLogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 class EntryLogExportView(APIView):
     """GET /api/logs/export/?filetype=csv|pdf - download the activity report."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdministrator]
 
     def get(self, request):
         filetype = request.query_params.get("filetype", "csv").strip().lower()

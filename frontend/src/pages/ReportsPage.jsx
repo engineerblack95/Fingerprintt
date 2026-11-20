@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import { devicesApi, getErrorMessage, logsApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { STATUS_META } from '../utils/constants';
 import { PageHeader } from '../components/PageHeader';
@@ -61,6 +62,8 @@ async function describeExportError(error) {
 
 export function ReportsPage() {
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [devices, setDevices] = useState([]);
   const [exporting, setExporting] = useState('');
@@ -207,15 +210,21 @@ export function ReportsPage() {
             A complete, Excel-friendly export of every matching event, including
             person, status, device, timestamp and source.
           </p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => handleExport('csv')}
-            disabled={Boolean(exporting)}
-          >
-            <Download size={15} className={exporting === 'csv' ? 'spin' : ''} />
-            {exporting === 'csv' ? 'Preparing…' : 'Download CSV'}
-          </button>
+          {isAdmin ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => handleExport('csv')}
+              disabled={Boolean(exporting)}
+            >
+              <Download size={15} className={exporting === 'csv' ? 'spin' : ''} />
+              {exporting === 'csv' ? 'Preparing…' : 'Download CSV'}
+            </button>
+          ) : (
+            <p className="report-locked">
+              <ShieldCheck size={14} /> Administrator access required
+            </p>
+          )}
         </section>
 
         <section className="card report-card">
@@ -227,15 +236,21 @@ export function ReportsPage() {
             A printable, paginated summary of the matching activity. Large
             histories are capped at 3,000 rows — use CSV for the full set.
           </p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => handleExport('pdf')}
-            disabled={Boolean(exporting)}
-          >
-            <Download size={15} className={exporting === 'pdf' ? 'spin' : ''} />
-            {exporting === 'pdf' ? 'Preparing…' : 'Download PDF'}
-          </button>
+          {isAdmin ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => handleExport('pdf')}
+              disabled={Boolean(exporting)}
+            >
+              <Download size={15} className={exporting === 'pdf' ? 'spin' : ''} />
+              {exporting === 'pdf' ? 'Preparing…' : 'Download PDF'}
+            </button>
+          ) : (
+            <p className="report-locked">
+              <ShieldCheck size={14} /> Administrator access required
+            </p>
+          )}
         </section>
       </div>
 

@@ -4,7 +4,7 @@ import { Fingerprint, Mail, Pencil, Phone, Trash2 } from 'lucide-react';
 import { RoleBadge } from './Badges';
 import { formatDate, initials, resolveMediaUrl } from '../utils/format';
 
-export function MemberCard({ member, onEdit, onDelete, onEnroll, enrolling }) {
+export function MemberCard({ member, canManage = false, onEdit, onDelete, onEnroll, enrolling }) {
   const [imageFailed, setImageFailed] = useState(false);
   const photoUrl = resolveMediaUrl(member.photo_url);
   const fingerprints = member.fingerprints || [];
@@ -58,27 +58,29 @@ export function MemberCard({ member, onEdit, onDelete, onEnroll, enrolling }) {
         <span className="member-created">Added {formatDate(member.created_at)}</span>
       </div>
 
-      <div className="member-actions">
-        <button type="button" className="member-action" onClick={() => onEdit(member)}>
-          <Pencil size={14} /> Edit
-        </button>
-        <button
-          type="button"
-          className="member-action"
-          onClick={() => onEnroll(member)}
-          disabled={enrolling || !member.fingerprint_count}
-          title={
-            member.fingerprint_count
-              ? 'Queue templates for the next device sync'
-              : 'No fingerprint template on file yet'
-          }
-        >
-          <Fingerprint size={14} /> {enrolling ? 'Queueing…' : 'Enroll'}
-        </button>
-        <button type="button" className="member-action danger" onClick={() => onDelete(member)}>
-          <Trash2 size={14} /> Delete
-        </button>
-      </div>
+      {canManage ? (
+        <div className="member-actions">
+          <button type="button" className="member-action" onClick={() => onEdit(member)}>
+            <Pencil size={14} /> Edit
+          </button>
+          <button
+            type="button"
+            className="member-action"
+            onClick={() => onEnroll(member)}
+            disabled={enrolling || !member.fingerprint_count}
+            title={
+              member.fingerprint_count
+                ? 'Queue templates for the next device sync'
+                : 'No fingerprint template on file yet'
+            }
+          >
+            <Fingerprint size={14} /> {enrolling ? 'Queueing…' : 'Enroll'}
+          </button>
+          <button type="button" className="member-action danger" onClick={() => onDelete(member)}>
+            <Trash2 size={14} /> Delete
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }

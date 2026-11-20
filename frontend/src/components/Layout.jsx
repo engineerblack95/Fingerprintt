@@ -45,6 +45,7 @@ export function Layout() {
   };
 
   const displayName = user?.full_name || user?.username || 'Owner';
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
 
   return (
     <div className="app-shell">
@@ -85,19 +86,25 @@ export function Layout() {
           ))}
 
           <span className="nav-label nav-label-spaced">Administration</span>
-          <a
-            href={ADMIN_URL}
-            className="nav-item"
-            target="_blank"
-            rel="noreferrer"
-            title="Open the Django admin dashboard in a new tab"
-          >
-            <span className="nav-icon">
-              <Settings size={19} />
+          {isAdmin ? (
+            <a
+              href={ADMIN_URL}
+              className="nav-item"
+              target="_blank"
+              rel="noreferrer"
+              title="Open the Django admin dashboard in a new tab"
+            >
+              <span className="nav-icon">
+                <Settings size={19} />
+              </span>
+              <span>Django admin</span>
+              <ExternalLink size={13} className="nav-external" />
+            </a>
+          ) : (
+            <span className="nav-access-note">
+              <ShieldCheck size={14} /> Limited access account
             </span>
-            <span>Django admin</span>
-            <ExternalLink size={13} className="nav-external" />
-          </a>
+          )}
         </nav>
 
         <div className="sidebar-spacer" />
@@ -115,7 +122,12 @@ export function Layout() {
         <div className="sidebar-user">
           <div className="avatar avatar-sm">{initials(displayName)}</div>
           <div className="sidebar-user-meta">
-            <strong>{displayName}</strong>
+            <strong>
+              {displayName}
+              <span className={`role-tag ${isAdmin ? 'role-tag-admin' : ''}`}>
+                {isAdmin ? 'Admin' : 'Limited'}
+              </span>
+            </strong>
             <span>{user?.email || 'Owner account'}</span>
           </div>
           <button
