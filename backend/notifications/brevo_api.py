@@ -22,6 +22,8 @@ from email.utils import parseaddr
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 
+from .diagnostics import key_fingerprint, mask_key
+
 logger = logging.getLogger(__name__)
 
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
@@ -67,6 +69,17 @@ class BrevoAPIEmailBackend(BaseEmailBackend):
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
             logger.error("Brevo API rejected email: HTTP %s %s", exc.code, detail)
+            if exc.code in (401, 403):
+                key = getattr(settings, "BREVO_API_KEY", "")
+                logger.error(
+                    "Brevo authentication failed. Active key: %s fingerprint=%s. "
+                    "This key is invalid, revoked, or belongs to a deleted "
+                    "Brevo account. Replace BREVO_API_KEY in the deployment "
+                    "environment with the 89-character key from "
+                    "https://app.brevo.com/settings/keys/api and redeploy.",
+                    mask_key(key),
+                    key_fingerprint(key),
+                )
             raise
         except urllib.error.URLError:
             logger.exception("Could not reach the Brevo API.")

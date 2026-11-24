@@ -8,6 +8,8 @@ from backend/.env in development). PostgreSQL is the only supported database.
 from datetime import timedelta
 from pathlib import Path
 import os
+import re
+from urllib.parse import urlparse
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
@@ -41,8 +43,36 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
-PUBLIC_BASE_URL = env("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
-FRONTEND_URL = env("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+# Canonical deployment URLs. A leftover localhost value on Render would produce
+# reset links and email media URLs that only work on the developer's machine,
+# so production falls back to the known deployed services instead.
+PRODUCTION_FRONTEND_URL = env(
+    "PRODUCTION_FRONTEND_URL", "https://fingerprintt.vercel.app"
+).rstrip("/")
+PRODUCTION_BACKEND_URL = env(
+    "PRODUCTION_BACKEND_URL", "https://fingerprint-backend-7032.onrender.com"
+).rstrip("/")
+
+
+def _public_url(name: str, local_default: str, production_default: str) -> str:
+    value = env(name, local_default).rstrip("/")
+    if not DEBUG and re.match(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$", value):
+        return production_default
+    return value
+
+
+PUBLIC_BASE_URL = _public_url(
+    "PUBLIC_BASE_URL", "http://localhost:8000", PRODUCTION_BACKEND_URL
+)
+FRONTEND_URL = _public_url(
+    "FRONTEND_URL", "http://localhost:5173", PRODUCTION_FRONTEND_URL
+)
+
+# WebSocket origin checks compare scheme + host. Trust the frontend host for
+# HTTP Host validation as well, so the Vercel dashboard can reach Django.
+_frontend_host = urlparse(FRONTEND_URL).hostname
+if _frontend_host and _frontend_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_frontend_host)
 
 INSTALLED_APPS = [
     "daphne",
@@ -281,7 +311,20 @@ CSRF_TRUSTED_ORIGINS = env_list(
 # Brevo (v3) API key. When present the notifications.brevo_api backend sends a
 # signed HTTPS POST instead of an SMTP session - the most reliable transport on
 # Render. Obtain it at https://app.brevo.com/settings/keys/api
-BREVO_API_KEY = env("BREVO_API_KEY", "").strip()
+def _clean_secret(name: str, default: str = "") -> str:
+    """Read a secret while removing copy/paste damage.
+
+    Render environment values are often pasted with surrounding quotes, a
+    trailing newline, a BOM or stray spaces. All of these produce the same
+    misleading ``401 Key not found`` response from Brevo, so normalise them.
+    """
+    raw = env(name, default) or ""
+    raw = raw.replace("\ufeff", "").replace("\u200b", "")
+    raw = "".join(raw.split())
+    return raw.strip('"').strip("'")
+
+
+BREVO_API_KEY = _clean_secret("BREVO_API_KEY")
 
 # A deployment that has a Brevo key must never silently fall back to the
 # console backend (which prints emails to the server log instead of sending
@@ -306,6 +349,13 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL", "Fingerprint Access <noreply@example.com>"
 )
 OWNER_EMAIL = env("OWNER_EMAIL", "")
+# A deployment that only sets OWNER_EMAIL still gets a usable, verified sender
+# instead of the inert example.com placeholder.
+if (
+    not DEFAULT_FROM_EMAIL
+    or "example.com" in DEFAULT_FROM_EMAIL.lower()
+) and OWNER_EMAIL:
+    DEFAULT_FROM_EMAIL = f"Fingerprint Access <{OWNER_EMAIL}>"
 # Only events at most this old trigger an owner alert. Importing or back-filling
 # history must never flood the inbox; live device events are always within it.
 EMAIL_MAX_EVENT_AGE_MINUTES = int(env("EMAIL_MAX_EVENT_AGE_MINUTES", "15"))

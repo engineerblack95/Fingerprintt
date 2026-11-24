@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getBackendBaseUrl } from '../utils/constants';
+
 function buildSocketUrl(token) {
-  const configured = import.meta.env.VITE_WS_URL;
+  const configured = String(import.meta.env.VITE_WS_URL || '').trim();
   let base = configured;
+
   if (!base) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    base = `${protocol}//${window.location.host}/ws/dashboard/`;
+    if (import.meta.env.PROD) {
+      // The static frontend host cannot proxy WebSockets (Vercel rewrites are
+      // HTTP-only), so connect straight to the Django/Daphne service. Deriving
+      // it from the backend URL keeps this correct without extra settings.
+      base = `${getBackendBaseUrl().replace(/^http/, 'ws')}/ws/dashboard/`;
+    } else {
+      // Vite proxies /ws to Django in development.
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      base = `${protocol}//${window.location.host}/ws/dashboard/`;
+    }
   }
+
   const url = new URL(base, window.location.href);
   url.searchParams.set('token', token);
   return url.toString();
