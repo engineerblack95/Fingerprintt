@@ -7,6 +7,8 @@ from django.http import JsonResponse
 from django.urls import include, path
 from django.views.decorators.cache import never_cache
 
+from notifications.views import EmailStatusView, EmailTestView
+
 admin.site.site_header = "Fingerprint Access Control"
 admin.site.site_title = "Fingerprint Access Control"
 admin.site.index_title = "Administration"
@@ -40,6 +42,16 @@ def health(request):
 
 urlpatterns = [
     path("api/health/", health, name="health"),
+    path(
+        "api/notifications/status/",
+        EmailStatusView.as_view(),
+        name="email-status",
+    ),
+    path(
+        "api/notifications/test/",
+        EmailTestView.as_view(),
+        name="email-test",
+    ),
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
     path("api/", include("members.urls")),
