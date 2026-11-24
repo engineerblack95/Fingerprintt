@@ -74,6 +74,11 @@ _frontend_host = urlparse(FRONTEND_URL).hostname
 if _frontend_host and _frontend_host not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(_frontend_host)
 
+# Build identity, supplied automatically by Render (and by CI elsewhere). It
+# lets /api/health/ prove which commit is actually serving traffic.
+GIT_COMMIT = env("RENDER_GIT_COMMIT", env("GIT_COMMIT", ""))
+GIT_BRANCH = env("RENDER_GIT_BRANCH", env("GIT_BRANCH", ""))
+
 INSTALLED_APPS = [
     "daphne",
     "django.contrib.admin",
