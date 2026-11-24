@@ -24,6 +24,7 @@ import { TrafficChart } from '../components/TrafficChart';
 import { StatusDonut } from '../components/StatusDonut';
 import { HourlyChart } from '../components/HourlyChart';
 import { LiveFeed } from '../components/LiveFeed';
+import { EmailHealthCard } from '../components/EmailHealthCard';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { Skeleton } from '../components/Loader';
 
@@ -352,6 +353,8 @@ export function DashboardPage() {
           </section>
         </div>
       </div>
+
+      {isAdmin ? <EmailHealthCard /> : null}
 
       <footer className="page-foot">
         <span>Last updated {lastUpdated ? formatDateTime(lastUpdated) : '—'}</span>

@@ -125,3 +125,10 @@ export const devicesApi = {
 export const dashboardApi = {
   stats: () => api.get('/dashboard/stats/'),
 };
+
+export const notificationsApi = {
+  status: () => api.get('/notifications/status/'),
+  sendTest: (payload = {}) => api.post('/notifications/test/', payload),
+  setKey: (apiKey) => api.post('/notifications/key/', { api_key: apiKey }),
+  clearKey: () => api.delete('/notifications/key/'),
+};
