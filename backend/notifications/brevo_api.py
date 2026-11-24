@@ -22,6 +22,7 @@ from email.utils import parseaddr
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 
+from .credentials import get_brevo_api_key
 from .diagnostics import key_fingerprint, mask_key
 
 logger = logging.getLogger(__name__)
@@ -50,12 +51,13 @@ class BrevoAPIEmailBackend(BaseEmailBackend):
 
     def _send(self, message) -> None:
         payload = self._build_payload(message)
+        api_key = get_brevo_api_key()
 
         request = urllib.request.Request(
             BREVO_API_URL,
             data=json.dumps(payload).encode("utf-8"),
             headers={
-                "api-key": settings.BREVO_API_KEY,
+                "api-key": api_key,
                 "content-type": "application/json",
                 "accept": "application/json",
             },
@@ -70,15 +72,15 @@ class BrevoAPIEmailBackend(BaseEmailBackend):
             detail = exc.read().decode("utf-8", errors="replace")
             logger.error("Brevo API rejected email: HTTP %s %s", exc.code, detail)
             if exc.code in (401, 403):
-                key = getattr(settings, "BREVO_API_KEY", "")
                 logger.error(
                     "Brevo authentication failed. Active key: %s fingerprint=%s. "
-                    "This key is invalid, revoked, or belongs to a deleted "
-                    "Brevo account. Replace BREVO_API_KEY in the deployment "
-                    "environment with the 89-character key from "
-                    "https://app.brevo.com/settings/keys/api and redeploy.",
-                    mask_key(key),
-                    key_fingerprint(key),
+                    "This key is invalid, revoked, truncated, or belongs to a "
+                    "deleted Brevo account. Install the working key from "
+                    "https://app.brevo.com/settings/keys/api via "
+                    "POST /api/notifications/key/ (administrator) or replace "
+                    "BREVO_API_KEY in the deployment environment.",
+                    mask_key(api_key),
+                    key_fingerprint(api_key),
                 )
             raise
         except urllib.error.URLError:

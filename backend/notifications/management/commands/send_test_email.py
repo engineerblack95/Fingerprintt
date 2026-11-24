@@ -9,6 +9,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from notifications.credentials import get_brevo_api_key, get_stored_api_key
 from notifications.diagnostics import key_fingerprint, mask_key
 
 BREVO_ACCOUNT_URL = "https://api.brevo.com/v3/account"
@@ -41,12 +42,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         recipient = (options["to"] or settings.OWNER_EMAIL or "").strip()
-        key = settings.BREVO_API_KEY
+        key = get_brevo_api_key()
+        source = "database" if get_stored_api_key() else "environment"
         is_brevo = "brevo" in (settings.EMAIL_BACKEND or "").lower()
 
         self.stdout.write("Email configuration")
         self.stdout.write(f"  EMAIL_BACKEND      = {settings.EMAIL_BACKEND}")
-        self.stdout.write(f"  BREVO_API_KEY      = {mask_key(key)}")
+        self.stdout.write(f"  BREVO_API_KEY      = {mask_key(key)} ({source})")
         self.stdout.write(f"  key fingerprint    = {key_fingerprint(key)}")
         self.stdout.write(f"  DEFAULT_FROM_EMAIL = {settings.DEFAULT_FROM_EMAIL}")
         self.stdout.write(f"  OWNER_EMAIL        = {settings.OWNER_EMAIL or 'MISSING'}")
@@ -133,9 +135,17 @@ class Command(BaseCommand):
             if exc.code in (401, 403):
                 self.stderr.write(
                     self.style.ERROR(
-                        "The deployment key is invalid or revoked. Replace "
-                        "BREVO_API_KEY with the local 89-character key "
-                        f"(fingerprint {key_fingerprint(key)}) and redeploy."
+                        "The active key is invalid, revoked or truncated. "
+                        "Install the working key with "
+                        "POST /api/notifications/key/ or replace BREVO_API_KEY "
+                        f"(active fingerprint {key_fingerprint(key)})."
+                    )
+                )
+            else:
+                self.stderr.write(
+                    self.style.ERROR(
+                        "Brevo answered with a server error; this is usually "
+                        "temporary. Try `send_test_email` to confirm delivery."
                     )
                 )
             return

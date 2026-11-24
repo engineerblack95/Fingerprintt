@@ -26,8 +26,9 @@ class NotificationsConfig(AppConfig):
 
         key = settings.BREVO_API_KEY
         logger.info(
-            "Email transport: backend=%s key=%s fingerprint=%s from=%r "
-            "owner=%r frontend=%s",
+            "Email transport: backend=%s env_key=%s fingerprint=%s from=%r "
+            "owner=%r frontend=%s (an administrator-installed credential, if "
+            "present, overrides the environment key)",
             settings.EMAIL_BACKEND,
             mask_key(key),
             key_fingerprint(key),
@@ -38,12 +39,19 @@ class NotificationsConfig(AppConfig):
 
         if not key:
             logger.error(
-                "BREVO_API_KEY is empty; no email can be delivered. Set it in "
-                "the deployment environment."
+                "BREVO_API_KEY is empty; no email can be delivered unless an "
+                "administrator installs a key via POST /api/notifications/key/."
             )
         elif not key.startswith("xkeysib-"):
             logger.error(
                 "BREVO_API_KEY does not start with 'xkeysib-'. It may be an "
                 "SMTP key or a placeholder, but the API requires an API key "
                 "from https://app.brevo.com/settings/keys/api"
+            )
+        elif len(key) < 40:
+            logger.error(
+                "BREVO_API_KEY is only %s characters long, which is too short "
+                "for a Brevo API key - the value was probably truncated. Fix it "
+                "or install the key via POST /api/notifications/key/.",
+                len(key),
             )

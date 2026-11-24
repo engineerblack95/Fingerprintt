@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.urls import include, path
 from django.views.decorators.cache import never_cache
 
-from notifications.views import EmailStatusView, EmailTestView
+from notifications.views import EmailKeyView, EmailStatusView, EmailTestView
 
 admin.site.site_header = "Fingerprint Access Control"
 admin.site.site_title = "Fingerprint Access Control"
@@ -25,7 +25,12 @@ def health(request):
     commit = (settings.GIT_COMMIT or "")[:7] or "dev"
     backend = settings.EMAIL_BACKEND or ""
     if "brevo_api" in backend:
-        email_configured = bool(settings.BREVO_API_KEY)
+        try:
+            from notifications.credentials import get_brevo_api_key
+
+            email_configured = bool(get_brevo_api_key())
+        except Exception:  # noqa: BLE001 - health must never fail on DB issues
+            email_configured = bool(settings.BREVO_API_KEY)
     else:
         email_configured = not backend.endswith("console.EmailBackend")
     return JsonResponse(
@@ -46,6 +51,11 @@ urlpatterns = [
         "api/notifications/status/",
         EmailStatusView.as_view(),
         name="email-status",
+    ),
+    path(
+        "api/notifications/key/",
+        EmailKeyView.as_view(),
+        name="email-key",
     ),
     path(
         "api/notifications/test/",

@@ -894,8 +894,10 @@ successful open. A 25-second ping keeps proxies from closing idle sockets.
 
 **Recipient:** `OWNER_EMAIL`.
 **From:** `DEFAULT_FROM_EMAIL`.
-**Transport:** Django email backend (`console` in development, `smtp` in
-production).
+**Transport:** Brevo HTTPS API (`notifications.brevo_api.BrevoAPIEmailBackend`)
+whenever `BREVO_API_KEY` is set; the console backend otherwise. The old SMTP
+relay remains available (`EMAIL_HOST`, `EMAIL_PORT`, …) if
+`EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` is set explicitly.
 
 | Status | Subject | Template | Contents |
 | --- | --- | --- | --- |
@@ -917,8 +919,27 @@ production).
 Test:
 
 ```powershell
-python manage.py send_test_email
+python manage.py send_test_email            # send a real message
+python manage.py send_test_email --check-key  # validate the key, send nothing
 ```
+
+**Deployment diagnostics.** Startup logs one line with the active backend, the
+masked key and its fingerprint (`sha256` prefix), the sender and the public
+URLs. Compare that fingerprint with the working local key. Two admin-only
+endpoints answer the same question over HTTP:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/notifications/status/` | Commit, masked key, fingerprint, sender and whether Brevo accepts the key |
+| `POST` | `/api/notifications/key/` | Validate and install a replacement Brevo key (stored encrypted, overrides the environment value) |
+| `DELETE` | `/api/notifications/key/` | Remove the stored override and fall back to `BREVO_API_KEY` |
+| `POST` | `/api/notifications/test/` | Deliver a real test message to `OWNER_EMAIL` |
+| `GET` | `/api/health/` | Public liveness probe: deployed commit, email backend and readiness |
+
+A `401 {"message":"Key not found"}` from Brevo means the deployed
+`BREVO_API_KEY` is invalid, revoked, or was pasted with surrounding quotes or a
+trailing newline. The loader strips quotes/BOM/whitespace, but the key itself
+must exist in the Brevo account that owns it.
 
 ---
 
@@ -1179,6 +1200,9 @@ python manage.py send_test_email
 | WebSocket stuck connecting | WSGI server or wrong proxy | Run Daphne/`runserver`; proxy `/ws` with upgrade headers |
 | WebSocket `4401` | Invalid/expired JWT | Re-login; check `VITE_WS_URL` |
 | Live feed works but email doesn't | Console backend or SMTP rejected | Check `EMAIL_BACKEND`; use an app password |
+| Deployed email fails, local works | `401 {"message":"Key not found"}` — deployed `BREVO_API_KEY` differs or was revoked | Compare fingerprints via logs or `/api/notifications/status/`, paste the working key in the host's environment, redeploy |
+| `WSREJECT /ws/dashboard/` in production | Origin not trusted, or the static host cannot proxy WebSockets | The ASGI app trusts `FRONTEND_URL`/`CORS_ALLOWED_ORIGINS`; the frontend connects directly to `wss://<backend>/ws/dashboard/` |
+| Password reset mail never arrives | Email transport broken (see above) | Fix the key; the endpoint deliberately returns the same generic response either way |
 | `npm.ps1 cannot be loaded` | PowerShell policy | Use `npm.cmd` |
 | Photos 404 | `/media` not served | Dev proxy or Nginx `/media/` |
 | `Unknown device_id` | Device not registered | `create_device` |
